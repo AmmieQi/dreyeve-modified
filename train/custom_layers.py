@@ -1,5 +1,8 @@
 import os
+
+# use Theano backend instead of Tensorflow backend for keras
 os.environ['KERAS_BACKEND'] = 'theano'
+
 from keras.layers.core import Layer, InputSpec
 import theano.tensor as T
 

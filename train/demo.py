@@ -45,27 +45,14 @@ def normalize_map(s_map):
 	return 255.0*norm_s_map
 
 
-def get_image(image_path, img_size, normalized=True):
-    img = Image.open(image_path)
-    img = CenterCrop((img.size[0]//2, img.size[0]))(img)
-    img = Resize(img_size)(img)
-
-    img = ToTensor()(img)
-    if normalized:
-        img = Normalize(mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225])(img)
-    return img
-
-
 def load_dreyeve_sample(sequence_id, sample, frames_per_seq=16, h=448, w=448):
 
     # get video frame files
     video_frames = [name for name in os.listdir(os.path.join(DATASET_PATH, sequence_id, 'images_4hz'))]
-    # start_frame_index = np.random.randint(8, len(video_frames) - SLIDING_WINDOW_SIZE - 1)
-    start_frame_index = 32
+    start_frame_index = np.random.randint(8, len(video_frames) - SLIDING_WINDOW_SIZE - 1)
     video_frames.sort()
     video_frames = video_frames[start_frame_index:start_frame_index+SLIDING_WINDOW_SIZE]
-    print("last image is ", video_frames[frames_per_seq-1])
+    # print("last image is ", video_frames[frames_per_seq-1])
 
     h_c = h_s = h // 4
     w_c = w_s = h // 4
@@ -153,27 +140,3 @@ if __name__ == '__main__':
     cv2.imwrite(join('heatmap_bdda.jpg'), heatmap_bdda)
 
     print("Formatted and Done.")
-
-
-
-
-
-# def get_dreyeve_sample(idx, sequence_ids):
-
-#     normalized_frames = torch.zeros([len(video_frames), 3, *IMG_FEATURE_SIZE], dtype=torch.float)
-#     original_frames = torch.zeros([len(video_frames), 3, *IMG_FEATURE_SIZE], dtype=torch.float)
-
-#     for i in range(len(video_frames)):
-#         try:
-#             normalized_frames_img_name = "_".join([sequence_id.replace("/", "_"),'images_4hz', video_frames[i]])
-#             normalized_frames[i] = get_image(os.path.join(DATASET_PATH, sequence_id, 'images_4hz', video_frames[i]), self.config.img_feature_size, normalized=True, apply_data_augmentation=None, img_name=normalized_frames_img_name)
-#         except:
-#             # in case of corrupted image
-#             print("could not do get_image for normalized frames")
-#             continue
-
-#         original_frames[i] = get_image(os.path.join(self.dataset_path, sequence_id, 'images_4hz', video_frames[i]),
-#                                       self.config.img_feature_size,
-#                                       normalized=False)
-
-#     return normalized_frames

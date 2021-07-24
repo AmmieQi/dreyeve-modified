@@ -1,5 +1,8 @@
 import os
+
+# use Theano backend instead of Tensorflow backend for keras
 os.environ['KERAS_BACKEND'] = 'theano'
+
 import keras.backend as K
 
 from keras.models import Model
