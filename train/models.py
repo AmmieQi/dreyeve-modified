@@ -7,8 +7,6 @@ from keras.layers import Input, Reshape, merge, Lambda, Activation, LeakyReLU
 from keras.layers import Convolution3D, MaxPooling3D, Convolution2D
 from keras.utils.data_utils import get_file
 
-from config import simo_mode
-
 from custom_layers import BilinearUpsampling
 
 K.set_image_dim_ordering('th')
@@ -94,13 +92,7 @@ def SaliencyBranch(input_shape, c3d_pretrained, branch=''):
     fine_h = Convolution2D(1, 3, 3, border_mode='same', init='glorot_uniform', name='{}_refine_conv4'.format(branch))(fine_h)
     fine_out = Activation('relu')(fine_h)
 
-    if simo_mode:
-        # repeat fine_out tensor along axis=1, since we have two loss
-        # DVD: this output shape is hardcoded, but should be fine
-        fine_out = Lambda(lambda x: K.repeat_elements(x, rep=2, axis=1),
-                          output_shape=(2, h, w), name='prediction_fine')(fine_out)
-    else:
-        fine_out = Activation('linear', name='prediction_fine')(fine_out)
+    fine_out = Activation('linear', name='prediction_fine')(fine_out)
 
     # coarse on crop
     crop_h = coarse_predictor(crop_in)
@@ -111,52 +103,3 @@ def SaliencyBranch(input_shape, c3d_pretrained, branch=''):
                   name='{}_saliency_branch'.format(branch))
 
     return model
-
-
-def DreyeveNet(frames_per_seq, h, w):
-    """
-    Function for constructing the whole DreyeveNet.
-
-    :param frames_per_seq: how many frames in each sequence.
-    :param h: h (fullframe).
-    :param w: w (fullframe).
-    :return: a Keras model.
-    """
-    # get saliency branches
-    im_net = SaliencyBranch(input_shape=(3, frames_per_seq, h, w), c3d_pretrained=True, branch='image')
-    of_net = SaliencyBranch(input_shape=(3, frames_per_seq, h, w), c3d_pretrained=True, branch='optical_flow')
-    seg_net = SaliencyBranch(input_shape=(19, frames_per_seq, h, w), c3d_pretrained=False, branch='segmentation')
-
-    # define inputs
-    X_ff = Input(shape=(3, 1, h, w), name='image_fullframe')
-    X_small = Input(shape=(3, frames_per_seq, h // 4, w // 4), name='image_resized')
-    X_crop = Input(shape=(3, frames_per_seq, h // 4, w // 4), name='image_cropped')
-
-    OF_ff = Input(shape=(3, 1, h, w), name='flow_fullframe')
-    OF_small = Input(shape=(3, frames_per_seq, h // 4, w // 4), name='flow_resized')
-    OF_crop = Input(shape=(3, frames_per_seq, h // 4, w // 4), name='flow_cropped')
-
-    SEG_ff = Input(shape=(19, 1, h, w), name='semseg_fullframe')
-    SEG_small = Input(shape=(19, frames_per_seq, h // 4, w // 4), name='semseg_resized')
-    SEG_crop = Input(shape=(19, frames_per_seq, h // 4, w // 4), name='semseg_cropped')
-
-    x_pred_fine, x_pred_crop = im_net([X_ff, X_small, X_crop])
-    of_pred_fine, of_pred_crop = of_net([OF_ff, OF_small, OF_crop])
-    seg_pred_fine, seg_pred_crop = seg_net([SEG_ff, SEG_small, SEG_crop])
-
-    fine_out = merge([x_pred_fine, of_pred_fine, seg_pred_fine], mode='sum', name='merge_fine_prediction')
-    fine_out = Activation('relu', name='prediction_fine')(fine_out)
-
-    crop_out = merge([x_pred_crop, of_pred_crop, seg_pred_crop], mode='sum', name='merge_crop_prediction')
-    crop_out = Activation('relu', name='prediction_crop')(crop_out)
-
-    model = Model(input=[X_ff, X_small, X_crop, OF_ff, OF_small, OF_crop, SEG_ff, SEG_small, SEG_crop],
-                  output=[fine_out, crop_out], name='DreyeveNet')
-
-    return model
-
-
-# tester function
-if __name__ == '__main__':
-    model = SaliencyBranch(input_shape=(3, 16, 448, 448), c3d_pretrained=True, branch='image')
-    model.summary()
