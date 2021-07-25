@@ -15,3 +15,5 @@ Run `python train.py` - you will have to modify the constants in `config.py` bef
 # Demo
 Run `python demo.py` - you will have to modify the constants in `config.py` before you run so that the script is pointed to the correct data folder path etc.
 
+# Acknowledgement & Links
+This repo is a modified version of the original repo for the DR (eye) ve network found at https://github.com/ndrplz/dreyeve
