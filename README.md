@@ -14,3 +14,6 @@ cd train
 pip install -r requirements.txt
 python demo.py
 ```
+
+# How to train 
+Follow all the instructions above but instead of `demo.py`, run `train.py`. 
