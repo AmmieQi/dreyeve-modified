@@ -20,7 +20,7 @@ from computer_vision_utils.tensor_manipulation import resize_tensor
 SLIDING_WINDOW_SIZE = 16
 DATASET_PATH = "../shared/hca_grp/hca_attention/"
 DATA_MODE = "manual"
-IMG_FEATURE_SIZE = [256, 512]
+# IMG_FEATURE_SIZE = [256, 512]
 
 # tf.disable_v2_behavior()
 
@@ -66,6 +66,7 @@ def load_dreyeve_sample(sequence_id, sample, frames_per_seq=16, h=448, w=448):
 
         # read image
         # x = get_image(os.path.join(DATASET_PATH, sequence_id, 'images_4hz', video_frames[fr]), h, w, normalized=True)
+        # - mean dreyeve image?
         x = read_image(join(DATASET_PATH, sequence_id, 'images_4hz', video_frames[fr]), channels_first=True, resize_dim=(h, w))
 
         I_s[0, :, fr, :, :] = resize_tensor(x, new_size=(h_s, w_s))
@@ -94,7 +95,7 @@ def setup_dataset():
 if __name__ == '__main__':
 
     # frames_per_seq, h, w = SLIDING_WINDOW_SIZE, IMG_FEATURE_SIZE[0], IMG_FEATURE_SIZE[1]
-    frames_per_seq, h, w = 16, 448, 448
+    frames_per_seq, h, w = SLIDING_WINDOW_SIZE, 448, 448
     verbose = True
 
     sequence_ids = setup_dataset()
@@ -106,7 +107,7 @@ if __name__ == '__main__':
 
     image_branch_bdda = SaliencyBranch(input_shape=(3, frames_per_seq, h, w), c3d_pretrained=True, branch='image')
     image_branch_bdda.compile(optimizer='adam', loss='kld')
-    image_branch_bdda.load_weights(model_path_bdda)  # load weights
+    # image_branch_bdda.load_weights(model_path_bdda)  # load weights
 
     print("Model weights loaded")
 
