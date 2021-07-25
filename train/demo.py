@@ -2,11 +2,6 @@
 
 import numpy as np
 import cv2
-from tqdm import tqdm
-from PIL import Image
-import pandas as pd
-import random
-# import tensorflow as tf
 
 import os
 from os.path import join
@@ -17,12 +12,11 @@ from models import SaliencyBranch
 from computer_vision_utils.io_helper import read_image, normalize
 from computer_vision_utils.tensor_manipulation import resize_tensor
 
-SLIDING_WINDOW_SIZE = 16
-DATASET_PATH = "../shared/hca_grp/hca_attention/"
-DATA_MODE = "manual"
-# IMG_FEATURE_SIZE = [256, 512]
+from config import DREYEVE_DIR as DATASET_PATH
+from config import DATA_MODE
 
-# tf.disable_v2_behavior()
+from utils import setup_dataset
+
 
 def blend_map(img, map, factor, colormap=cv2.COLORMAP_JET):
 
@@ -49,9 +43,9 @@ def load_dreyeve_sample(sequence_id, sample, frames_per_seq=16, h=448, w=448):
 
     # get video frame files
     video_frames = [name for name in os.listdir(os.path.join(DATASET_PATH, sequence_id, 'images_4hz'))]
-    start_frame_index = np.random.randint(8, len(video_frames) - SLIDING_WINDOW_SIZE - 1)
+    start_frame_index = np.random.randint(8, len(video_frames) - frames_per_seq - 1)
     video_frames.sort()
-    video_frames = video_frames[start_frame_index:start_frame_index+SLIDING_WINDOW_SIZE]
+    video_frames = video_frames[start_frame_index:start_frame_index+frames_per_seq]
     # print("last image is ", video_frames[frames_per_seq-1])
 
     h_c = h_s = h // 4
@@ -62,8 +56,6 @@ def load_dreyeve_sample(sequence_id, sample, frames_per_seq=16, h=448, w=448):
     I_c = np.zeros(shape=(1, 3, frames_per_seq, h_c, w_c), dtype='float32')
 
     for fr in xrange(0, frames_per_seq):
-        # offset = sample - frames_per_seq + 1 + fr
-
         # read image
         # x = get_image(os.path.join(DATASET_PATH, sequence_id, 'images_4hz', video_frames[fr]), h, w, normalized=True)
         # - mean dreyeve image?
@@ -77,37 +69,19 @@ def load_dreyeve_sample(sequence_id, sample, frames_per_seq=16, h=448, w=448):
     return [I_ff, I_s, I_c], join(DATASET_PATH, sequence_id, 'images_4hz', video_frames[frames_per_seq-1])
 
 
-def setup_dataset():
-    sequence_ids = []
-    for participant_id in tqdm(os.listdir(os.path.join(DATASET_PATH))):
-        if os.path.exists(os.path.join(DATASET_PATH, participant_id, 'alignment.csv')):
-            alignment = pd.read_csv(os.path.join(DATASET_PATH, participant_id, 'alignment.csv'))
-
-            for session_name in alignment['session_name']:
-                input_path = os.path.join(participant_id, session_name)
-                if DATA_MODE in input_path:
-                    sequence_ids.append(input_path)
-    seed = 0
-    random.Random(seed).shuffle(sequence_ids)
-    return sequence_ids
-
-
 if __name__ == '__main__':
-
-    # frames_per_seq, h, w = SLIDING_WINDOW_SIZE, IMG_FEATURE_SIZE[0], IMG_FEATURE_SIZE[1]
-    frames_per_seq, h, w = SLIDING_WINDOW_SIZE, 448, 448
+    frames_per_seq, h, w = 16, 448, 448
     verbose = True
 
     sequence_ids = setup_dataset()
     print("Sequence ids : ", sequence_ids)
-
     print("Sequence_ids set up")
 
     model_path_bdda = os.path.join("bdda_image_branch.h5")
 
     image_branch_bdda = SaliencyBranch(input_shape=(3, frames_per_seq, h, w), c3d_pretrained=True, branch='image')
     image_branch_bdda.compile(optimizer='adam', loss='kld')
-    # image_branch_bdda.load_weights(model_path_bdda)  # load weights
+    image_branch_bdda.load_weights(model_path_bdda)  # load weights
 
     print("Model weights loaded")
 

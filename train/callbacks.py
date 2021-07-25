@@ -8,27 +8,17 @@ from keras.callbacks import ReduceLROnPlateau, CSVLogger, Callback
 from os.path import join, exists
 
 from batch_generators import dreyeve_I_batch
-from utils import seg_to_colormap, get_branch_from_experiment_id
+from utils import seg_to_colormap, get_branch_from_experiment_id, setup_dataset
+
 import sys
 sys.path.append('..')
-
-import random
-from tqdm import tqdm
-import pandas as pd
 
 from computer_vision_utils.stitching import stitch_together
 from computer_vision_utils.io_helper import write_image, normalize
 
-# Constants
-DREYEVE_DIR = "../shared/hca_grp/hca_attention/"
-DATA_MODE = "manual"
-FRAMES_PER_SEQ = 16
-H = 448
-W = 448
-LOG_DIR = "./logs"
-CALLBACK_BATCHSIZE = 8
-CKP_DIR = "./checkpoints"
-PRD_DIR = "./predictions"
+from config import DREYEVE_DIR, DATA_MODE, FRAMES_PER_SEQ, H, W, GT_TYPE
+from config import LOG_DIR, CALLBACK_BATCHSIZE, CKP_DIR, PRD_DIR
+
 
 class ModelLoader(Callback):
     """
@@ -116,21 +106,6 @@ class PredictionCallback(Callback):
 
         # set out dir as attribute of PredictionCallback
         self.out_dir_path = out_dir_path
-
-        def setup_dataset():
-            sequence_ids = []
-            for participant_id in tqdm(os.listdir(os.path.join(DREYEVE_DIR))):
-                if os.path.exists(os.path.join(DREYEVE_DIR, participant_id, 'alignment.csv')):
-                    alignment = pd.read_csv(os.path.join(DREYEVE_DIR, participant_id, 'alignment.csv'))
-
-                    for session_name in alignment['session_name']:
-                        input_path = os.path.join(participant_id, session_name)
-                        if DATA_MODE in input_path:
-                            sequence_ids.append(input_path)
-            seed = 0
-            random.Random(seed).shuffle(sequence_ids)
-            return sequence_ids
-        
         self.sequence_ids = setup_dataset()
 
     def on_epoch_begin(self, epoch, logs={}):
@@ -142,7 +117,7 @@ class PredictionCallback(Callback):
         if self.branch == 'image':
             # X is [B_ff, B_s, B_c]
             X, Y = dreyeve_I_batch(batchsize=CALLBACK_BATCHSIZE, nb_frames=FRAMES_PER_SEQ, image_size=(H, W),
-                                   mode='val', gt_type='fix', sequence_ids=self.sequence_ids)
+                                   mode='val', gt_type=GT_TYPE, sequence_ids=self.sequence_ids)
         # elif self.branch == 'optical_flow':
         #     X, Y = dreyeve_OF_batch(batchsize=callback_batchsize, nb_frames=frames_per_seq, image_size=(h, w),
         #                             mode='val', gt_type='fix')

@@ -1,4 +1,10 @@
 import numpy as np
+import os
+from tqdm import tqdm
+import pandas as pd
+import random
+
+from config import DREYEVE_DIR, DATA_MODE
 
 # cityscapes dataset palette
 palette = np.array([[128, 64, 128],
@@ -73,3 +79,19 @@ def get_branch_from_experiment_id(experiment_id):
         branch = "semseg"
 
     return branch
+
+
+def setup_dataset():
+    """Gets all the sequence ids for our dataset."""
+    sequence_ids = []
+    for participant_id in tqdm(os.listdir(os.path.join(DREYEVE_DIR))):
+        if os.path.exists(os.path.join(DREYEVE_DIR, participant_id, 'alignment.csv')):
+            alignment = pd.read_csv(os.path.join(DREYEVE_DIR, participant_id, 'alignment.csv'))
+
+            for session_name in alignment['session_name']:
+                input_path = os.path.join(participant_id, session_name)
+                if DATA_MODE in input_path:
+                    sequence_ids.append(input_path)
+    seed = 0
+    random.Random(seed).shuffle(sequence_ids)
+    return sequence_ids
